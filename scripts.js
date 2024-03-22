@@ -1,3 +1,7 @@
+var AFRAME = require('aframe-core');
+var NoClickLookControls = require('aframe-no-click-look-controls');
+AFRAME.registerComponent('no-click-look-controls', NoClickLookControls);
+
 let activeObj = [];
 AFRAME.registerComponent('collider-check', {
     dependencies: ['raycaster'],
