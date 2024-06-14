@@ -228,9 +228,9 @@ class FirstPersonCamera {
 
     this.camera_.lookAt(closest);
 
-    this.cameraLight.position.copy(new THREE.Vector3(this.camera_.position.x, this.camera_.position.y + 1, this.camera_.position.z - 1));
-    this.cameraLight.quaternion.copy(this.rotation_);
-    this.cameraLight.lookAt(closest);
+    // this.cameraLight.position.copy(new THREE.Vector3(this.camera_.position.x, this.camera_.position.y + 1, this.camera_.position.z - 1));
+    // this.cameraLight.quaternion.copy(this.rotation_);
+    // this.cameraLight.lookAt(closest);
   }
 
   updateHeadBob_(timeElapsedS) {
@@ -415,11 +415,11 @@ class FirstPersonCameraDemo {
 
     this.rigidBodies.push({ mesh: box, rigidBody: rbBox });
 
-    const light = new THREE.AmbientLight(0x303030); // soft white light
-    this.scene_.add(light);
+    // const light = new THREE.AmbientLight(0x303030); // soft white light
+    // this.scene_.add(light);
 
     loader.setPath( 'models/' );
-    loader.load("daksha3.glb", function (gltf) {
+    loader.load("kaste.glb", function (gltf) {
       this.scene_.add(gltf.scene);
 
       render();
@@ -462,11 +462,11 @@ class FirstPersonCameraDemo {
 
     this.sprite_ = new THREE.Sprite(
       new THREE.SpriteMaterial({ map: crosshair, color: 0xffffff, fog: false, depthTest: false, depthWrite: false }));
-    this.sprite_.scale.set(0.15, 0.15 * this.camera_.aspect, 1)
+    this.sprite_.scale.set(0.13, 0.13 * this.camera_.aspect, 1)
     this.sprite_.position.set(0, 0, -10);
 
     this.uiScene_.add(this.sprite_);
-    this.cameraLight = new THREE.SpotLight(0xffffff, 6);
+    this.cameraLight = new THREE.SpotLight(0xffffff, 6, 30);
     this.cameraLight.castShadow = true;
 
 
@@ -474,14 +474,15 @@ class FirstPersonCameraDemo {
 
 
     this.cameraLight.visible = true;
-    this.cameraLight.distance = 40;
-    this.cameraLight.decay = 1;
+    this.cameraLight.distance = 50;
+    this.cameraLight.decay = 1.1;
     this.cameraLight.angle = Math.PI / 4;
-    this.cameraLight.penumbra = 0.1;
+    this.cameraLight.penumbra = 1.5;
 
-    this.scene_.add(this.cameraLight);
-    // this.cameraLight.position.set( 0, 0, 1);
-    // this.scene_.add(this.camera_);
+    this.camera_.add(this.cameraLight);
+    this.cameraLight.position.set( 0, 0, 1);
+    this.cameraLight.target = this.camera_;
+    this.scene_.add(this.camera_);
 
   }
 
