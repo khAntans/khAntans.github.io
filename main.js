@@ -17,6 +17,8 @@ const KEYS = {
   'd': 68,
 };
 
+
+const canvas = document.querySelector("canvas");
 const DEFAULT_MASS = 10;
 
 function clamp(x, a, b) {
@@ -107,17 +109,25 @@ class InputController {
     this.target_.addEventListener('keyup', (e) => this.onKeyUp_(e), false);
   }
 
+
+
   onMouseMove_(e) {
 
     this.current_.mouseX = e.pageX - window.innerWidth / 2;
     this.current_.mouseY = e.pageY - window.innerHeight / 2;
 
+    // this.current_.mouseX = e.movementX - canvas.width /2;
+    // this.current_.mouseY = e.movementY - canvas.height /2;
+  
+
     if (this.previous_ === null) {
       this.previous_ = { ...this.current_ };
     }
 
-    this.current_.mouseXDelta = this.current_.mouseX - this.previous_.mouseX;
-    this.current_.mouseYDelta = this.current_.mouseY - this.previous_.mouseY;
+    // this.current_.mouseXDelta = this.current_.mouseX - this.previous_.mouseX;
+    // this.current_.mouseYDelta = this.current_.mouseY - this.previous_.mouseY;
+    this.current_.mouseXDelta = e.movementX;
+    this.current_.mouseYDelta = e.movementY;
   }
 
   onMouseDown_(e) {
