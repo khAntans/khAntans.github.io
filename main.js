@@ -6,9 +6,9 @@ import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
 
 const loader = new GLTFLoader();
 
-const dracoLoader = new DRACOLoader();
-dracoLoader.setDecoderPath('/examples/jsm/libs/draco/');
-loader.setDRACOLoader(dracoLoader);
+// const dracoLoader = new DRACOLoader();
+// dracoLoader.setDecoderPath('/examples/jsm/libs/draco/');
+// loader.setDRACOLoader(dracoLoader);
 
 const KEYS = {
   'a': 65,
@@ -418,14 +418,11 @@ class FirstPersonCameraDemo {
     const light = new THREE.AmbientLight(0x303030); // soft white light
     this.scene_.add(light);
 
-    loader.load("models/kaste.glb", function (gltf) {
+    loader.setPath( 'models/' );
+    loader.load("daksha3.glb", function (gltf) {
       this.scene_.add(gltf.scene);
 
-      gltf.animations; // Array<THREE.AnimationClip>
-      gltf.scene; // THREE.Group
-      gltf.scenes; // Array<THREE.Group>
-      gltf.cameras; // Array<THREE.Camera>
-      gltf.asset;
+      render();
     },
       // called while loading is progressing
       function (xhr) {
