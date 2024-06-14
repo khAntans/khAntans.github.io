@@ -6,9 +6,9 @@ import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
 
 const loader = new GLTFLoader();
 
-// const dracoLoader = new DRACOLoader();
-// dracoLoader.setDecoderPath('/examples/jsm/libs/draco/');
-// loader.setDRACOLoader(dracoLoader);
+const dracoLoader = new DRACOLoader();
+dracoLoader.setDecoderPath('/examples/jsm/libs/draco/');
+loader.setDRACOLoader(dracoLoader);
 
 const KEYS = {
   'a': 65,
@@ -20,6 +20,8 @@ const KEYS = {
 
 const canvas = document.querySelector("canvas");
 const DEFAULT_MASS = 10;
+
+let mouseActive = false;
 
 function clamp(x, a, b) {
   return Math.min(Math.max(x, a), b);
@@ -112,9 +114,9 @@ class InputController {
 
 
   onMouseMove_(e) {
-
-    this.current_.mouseX = e.pageX - window.innerWidth / 2;
-    this.current_.mouseY = e.pageY - window.innerHeight / 2;
+   if(mouseActive){
+    // this.current_.mouseX = e.pageX - window.innerWidth / 2;
+    // this.current_.mouseY = e.pageY - window.innerHeight / 2;
 
     // this.current_.mouseX = e.movementX - canvas.width /2;
     // this.current_.mouseY = e.movementY - canvas.height /2;
@@ -128,6 +130,7 @@ class InputController {
     // this.current_.mouseYDelta = this.current_.mouseY - this.previous_.mouseY;
     this.current_.mouseXDelta = e.movementX;
     this.current_.mouseYDelta = e.movementY;
+  }
   }
 
   onMouseDown_(e) {
@@ -161,6 +164,9 @@ class InputController {
   }
 
   onKeyDown_(e) {
+    if(e.key == "Escape"){
+      mouseActive = false;
+    }
     this.keys_[e.keyCode] = true;
   }
 
@@ -351,7 +357,9 @@ class FirstPersonCameraDemo {
         await document.querySelector('canvas').requestPointerLock({
           unadjustedMovement: true,
         });
+        mouseActive = true;
       }
+      
     });
 
     window.addEventListener('resize', () => {
