@@ -4,13 +4,25 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gaming</title>
-    <style>
-        body { margin: 0; }
-    </style>
+    <link rel="stylesheet" href="style.css">
     <script src="https://cdn.jsdelivr.net/gh/kripken/ammo.js@HEAD/builds/ammo.wasm.js"></script>
-   
+    <script type="importmap"> { "imports": 
+        { "three": "https://cdn.jsdelivr.net/npm/three@0.165/build/three.module.js", 
+            "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.165/examples/jsm/" } } </script>
 </head>
-<body>
+<body >
+    <!-- <div id="blocker" style="display: block;">
+        <div id="instructions" style="">
+            <p style="font-size:36px">
+                Click to play
+            </p>
+            <p>
+                Move: WASD<br>
+                Jump: SPACE<br>
+                Look: MOUSE
+            </p>
+        </div>
+    </div> -->
     <script type="module" src="main.js"></script>
 </body>
 </html>

@@ -1,7 +1,14 @@
-import * as THREE from 'https://cdn.skypack.dev/three@0.136';
+import * as THREE from 'three';
 
-import {FirstPersonControls} from 'https://cdn.skypack.dev/three@0.136/examples/jsm/controls/FirstPersonControls.js';
+// import {FirstPersonControls} from 'https://cdn.skypack.dev/three@0.136/examples/jsm/controls/FirstPersonControls.js';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
 
+const loader = new GLTFLoader();
+
+const dracoLoader = new DRACOLoader();
+dracoLoader.setDecoderPath( '/examples/jsm/libs/draco/' );
+loader.setDRACOLoader( dracoLoader );
 
 const KEYS = {
   'a': 65,
@@ -10,8 +17,69 @@ const KEYS = {
   'd': 68,
 };
 
+const DEFAULT_MASS = 10;
+
 function clamp(x, a, b) {
   return Math.min(Math.max(x, a), b);
+}
+
+class RigidBody{
+  constructor(){}
+  setRestitution(val) {
+    this.body.setRestitution(val);
+  }
+
+  setFriction(val) {
+    this.body.setFriction(val);
+  }
+
+  setRollingFriction(val) {
+    this.body.setRollingFriction(val);
+  }
+
+  createBox(mass, pos, quat, size){
+    this.transform = new Ammo.btTransform();
+    this.transform.setIdentity();
+    this.transform.setOrigin(new Ammo.btVector3(pos.x,pos.y,pos.z));
+    this.transform.setRotation(new Ammo.btQuaternion(quat.x,quat.y,quat.z,quat.w));
+    this.motionState = new Ammo.btDefaultMotionState(this.transform);
+
+    const btSize = new Ammo.btVector3(size.x * 0.5, size.y * 0.5, size.z * 0.5);
+    this.shape = new Ammo.btBoxShape(btSize);
+    this.shape.setMargin(0.05);
+
+    this.inertia = new Ammo.btVector3(0,0,0);
+
+    if(mass > 0){
+      this.shape.calculateLocalInertia(mass, this.inertia);
+    }
+
+    this.info = new Ammo.btRigidBodyConstructionInfo(
+      mass, this.motionState, this.shape, this.inertia
+    );
+    this.body = new Ammo.btRigidBody(this.info);
+
+    Ammo.destroy(btSize);
+  }
+
+  createSphere(mass, pos, size) {
+    this.transform = new Ammo.btTransform();
+    this.transform.setIdentity();
+    this.transform.setOrigin(new Ammo.btVector3(pos.x, pos.y, pos.z));
+    this.transform.setRotation(new Ammo.btQuaternion(0, 0, 0, 1));
+    this.motionState = new Ammo.btDefaultMotionState(this.transform);
+
+    this.shape = new Ammo.btSphereShape(size);
+    this.shape.setMargin(0.05);
+
+    this.inertia = new Ammo.btVector3(0, 0, 0);
+    if(mass > 0) {
+      this.shape.calculateLocalInertia(mass, this.inertia);
+    }
+
+    this.info = new Ammo.btRigidBodyConstructionInfo(mass, this.motionState, this.shape, this.inertia);
+    this.body = new Ammo.btRigidBody(this.info);
+  }
 }
 
 class InputController {
@@ -40,6 +108,7 @@ class InputController {
   }
 
   onMouseMove_(e) {
+
     this.current_.mouseX = e.pageX - window.innerWidth / 2;
     this.current_.mouseY = e.pageY - window.innerHeight / 2;
 
@@ -109,7 +178,7 @@ class InputController {
 
 
 class FirstPersonCamera {
-  constructor(camera, objects) {
+  constructor(camera, objects, cameraLight) {
     this.camera_ = camera;
     this.input_ = new InputController();
     this.rotation_ = new THREE.Quaternion();
@@ -121,6 +190,7 @@ class FirstPersonCamera {
     this.headBobActive_ = false;
     this.headBobTimer_ = 0;
     this.objects_ = objects;
+    this.cameraLight = cameraLight;
   }
 
   update(timeElapsedS) {
@@ -135,6 +205,7 @@ class FirstPersonCamera {
     this.camera_.quaternion.copy(this.rotation_);
     this.camera_.position.copy(this.translation_);
     this.camera_.position.y += Math.sin(this.headBobTimer_ * 10) * 0.3;
+ 
 
     const forward = new THREE.Vector3(0, 0, -1);
     forward.applyQuaternion(this.rotation_);
@@ -156,6 +227,9 @@ class FirstPersonCamera {
     }
 
     this.camera_.lookAt(closest);
+
+    this.cameraLight.position.copy(new THREE.Vector3(this.camera_.position.x, this.camera_.position.y, this.camera_.position.z - 1));
+    this.cameraLight.rotation.copy(this.camera_.rotation);
   }
 
   updateHeadBob_(timeElapsedS) {
@@ -221,6 +295,17 @@ class FirstPersonCameraDemo {
   }
 
   initialize_() {
+    // funy ammo calls
+    this.collisionConfiguration = new Ammo.btDefaultCollisionConfiguration();
+    this.dispatcher = new Ammo.btCollisionDispatcher(this.collisionConfiguration);
+    this.broadphase = new Ammo.btDbvtBroadphase();
+    this.solver = new Ammo.btSequentialImpulseConstraintSolver();
+    this.physicsWorld = new Ammo.btDiscreteDynamicsWorld(
+      this.dispatcher,this.broadphase, this.solver, this.collisionConfiguration
+    );
+    this.physicsWorld.setGravity(new Ammo.btVector3(0,-10,0));
+
+
     this.initializeRenderer_();
     this.initializeLights_();
     this.initializeScene_();
@@ -228,13 +313,14 @@ class FirstPersonCameraDemo {
     this.initializeDemo_();
 
     this.previousRAF_ = null;
+    this.tmpTransform = new Ammo.btTransform();
     this.raf_();
     this.onWindowResize_();
   }
 
   initializeDemo_() {
 
-    this.fpsCamera_ = new FirstPersonCamera(this.camera_, this.objects_);
+    this.fpsCamera_ = new FirstPersonCamera(this.camera_, this.objects_, this.cameraLight);
   }
 
   initializeRenderer_() {
@@ -249,6 +335,13 @@ class FirstPersonCameraDemo {
     this.threejs_.outputEncoding = THREE.sRGBEncoding;
 
     document.body.appendChild(this.threejs_.domElement);
+    document.querySelector('canvas').addEventListener("click", async () => {
+      if(!document.pointerLockElement) {
+        await document.querySelector('canvas').requestPointerLock({
+          unadjustedMovement: true,
+        });
+      }
+    });
 
     window.addEventListener('resize', () => {
       this.onWindowResize_();
@@ -262,6 +355,7 @@ class FirstPersonCameraDemo {
     this.camera_.position.set(0, 2, 0);
 
     this.scene_ = new THREE.Scene();
+    
 
     this.uiCamera_ = new THREE.OrthographicCamera(
         -1, 1, 1 * aspect, -1 * aspect, 1, 1000);
@@ -280,7 +374,7 @@ class FirstPersonCameraDemo {
   ]);
 
     texture.encoding = THREE.sRGBEncoding;
-    this.scene_.background = texture;
+    // this.scene_.background = texture;
 
     const mapLoader = new THREE.TextureLoader();
     const maxAnisotropy = this.threejs_.capabilities.getMaxAnisotropy();
@@ -290,7 +384,7 @@ class FirstPersonCameraDemo {
     checkerboard.wrapT = THREE.RepeatWrapping;
     checkerboard.repeat.set(32, 32);
     checkerboard.encoding = THREE.sRGBEncoding;
-
+    this.rigidBodies = [];
     const plane = new THREE.Mesh(
         new THREE.PlaneGeometry(100, 100, 10, 10),
         new THREE.MeshStandardMaterial({map: checkerboard}));
@@ -298,14 +392,36 @@ class FirstPersonCameraDemo {
     plane.receiveShadow = true;
     plane.rotation.x = -Math.PI / 2;
     this.scene_.add(plane);
+    const rbPlane = new RigidBody();
+    rbPlane.createBox(0,plane.position,plane.quaternion, new THREE.Vector3(100,1,100));
+    this.physicsWorld.addRigidBody(rbPlane.body);
+    this.rigidBodies.push({mesh: plane, rigidBody: rbPlane});
 
     const box = new THREE.Mesh(
       new THREE.BoxGeometry(4, 4, 4),
       this.loadMaterial_('vintage-tile1_', 0.2));
-    box.position.set(10, 2, 0);
+    box.position.set(10, 10, 2);
     box.castShadow = true;
     box.receiveShadow = true;
     this.scene_.add(box);
+
+    const rbBox = new RigidBody();
+    rbBox.createBox(10,box.position,box.quaternion, new THREE.Vector3(4,4,4));
+    this.physicsWorld.addRigidBody(rbPlane.body);
+    rbBox.setRestitution(0.25);
+          rbBox.setFriction(1);
+          rbBox.setRollingFriction(5);
+
+    this.rigidBodies.push({mesh: box, rigidBody: rbBox});
+
+    loader.load( 'models/kaste.glb', function ( gltf )
+{
+    sword = gltf.scene;  // sword 3D object is loaded
+    sword.scale.set(1, 1, 1);
+    sword.position.y = 0;
+    this.scene_.add(sword);
+} );
+
 
     const concreteMaterial = this.loadMaterial_('concrete3-', 4);
 
@@ -334,6 +450,23 @@ class FirstPersonCameraDemo {
     this.sprite_.position.set(0, 0, -10);
 
     this.uiScene_.add(this.sprite_);
+    this.cameraLight = new THREE.SpotLight(0xffffff, 6);
+    this.cameraLight.castShadow = true;
+    
+    
+    this.cameraLight.shadow.bias = -0.0001;
+    
+    
+    this.cameraLight.visible = true;
+    this.cameraLight.distance = 40;
+    this.cameraLight.decay = 1;
+    this.cameraLight.angle = Math.PI/4;
+    this.cameraLight.penumbra = 0.1; 
+        
+    this.scene_.add( this.cameraLight );
+    // this.cameraLight.position.set( 0, 0, 1);
+    // this.scene_.add(this.camera_);
+    
   }
 
   initializeLights_() {
@@ -353,7 +486,7 @@ class FirstPersonCameraDemo {
 
     light.position.set(25, 25, 0);
     light.lookAt(0, 0, 0);
-    this.scene_.add(light);
+    // this.scene_.add(light);
 
     const upColour = 0xFFFF80;
     const downColour = 0x808080;
@@ -361,7 +494,11 @@ class FirstPersonCameraDemo {
     light.color.setHSL( 0.6, 1, 0.6 );
     light.groundColor.setHSL( 0.095, 1, 0.75 );
     light.position.set(0, 4, 0);
-    this.scene_.add(light);
+    // this.scene_.add(light);
+
+   
+
+
   }
 
   loadMaterial_(name, tiling) {
@@ -436,8 +573,23 @@ class FirstPersonCameraDemo {
   step_(timeElapsed) {
     const timeElapsedS = timeElapsed * 0.001;
 
+    this.physicsWorld.stepSimulation(timeElapsedS, 10);
+
     // this.controls_.update(timeElapsedS);
     this.fpsCamera_.update(timeElapsedS);
+
+    for(let i = 0; i < this.rigidBodies.length; i++){
+      this.rigidBodies[i].rigidBody.motionState.getWorldTransform(this.tmpTransform);
+      const pos = this.tmpTransform.getOrigin();
+      const quat = this.tmpTransform.getRotation();
+      const pos3 = new THREE.Vector3(pos.x(),pos.y(),pos.z());
+      const quat3 = new THREE.Quaternion(quat.x(),quat.y(),quat.z(), quat.w());
+
+      this.rigidBodies[i].mesh.position.copy(pos3);
+      this.rigidBodies[i].mesh.quaternion.copy(quat3);
+
+      
+    }
   }
 }
 
@@ -445,5 +597,14 @@ class FirstPersonCameraDemo {
 let _APP = null;
 
 window.addEventListener('DOMContentLoaded', () => {
-  _APP = new FirstPersonCameraDemo();
+  Ammo().then((lib)=>{
+    Ammo = lib;
+    _APP = new FirstPersonCameraDemo();
+    // _APP.initialize_();
+  });
+  
+  // _APP = new FirstPersonCameraDemo();
 });
+
+
+

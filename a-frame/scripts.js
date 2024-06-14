@@ -1,3 +1,5 @@
+
+
 let activeObj = [];
 AFRAME.registerComponent('collider-check', {
   dependencies: ['raycaster'],
